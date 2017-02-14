@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      Introdução ao React PHP
+    </title>
+
+    <link rel="stylesheet" type="text/css" href="assets/reveal.js/css/reveal.css">
+    <link rel="stylesheet" type="text/css" href="assets/reveal.js/css/theme/black.css">
+
+    <meta charset="utf-8">
+  </head>
+  <body>
+    <div class="reveal">
+      <div class="slides">
+        <!-- Introdução: conteúdo e palestrante -->
+        <section id="introducao">
+          <section>
+            <h4>Introdução ao React PHP</h4>
+            Event-Loop e Streams
+          </section>
+
+          <section>
+            <h2>
+              Níckolas Daniel da Silva
+            </h2>
+            <div>
+              <div style="float: left">
+                <img data-src="http://www.nawarian.xyz/images/nawarian.jpg" style="width: 4.6em;">
+              </div>
+              <div style="float: right; width: 18em;">
+                <ul>
+                  <li>
+                    Desenvolvedor há 5 anos
+                  </li>
+                  <li>
+                    Análise e Desenvolvimento de Sistemas [UNIFIEO]
+                  </li>
+                  <li>
+                    Engenharia de Software Orientada para Serviços [IBTA]
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <small style="margin-top: 2em;">
+              <a href="http://nawarian.xyz" target="_new">
+                http://nawarian.xyz
+              </a>
+              |
+              <a href="http://git.io/vEe0o" target="_new">
+                http://git.io/vEe0o
+              </a>
+              |
+              <a href="http://phpsp.org.br" target="_new">
+                http://phpsp.org.br
+              </a>
+            </small>
+          </section>
+
+        </section>
+
+        <!-- Introdução: async e utilidades -->
+        <section id="introducao-react-php">
+          <section>
+            <h2>
+              Como costumamos fazer
+            </h2>
+            <pre><code class="php">
+$mapper = $this->getMapper();
+
+$player = new Model\Player();
+$player->decorate($data); // dados do jogador
+
+$mapper->player->persist($player); // x ms
+$this->createInventory($player); // 60 ms
+$this->createSkillset($player); // 120 ms
+
+$mapper->flush();
+return (new JsonResponse($player)); // 180 + x ms
+      </code></pre>
+          </section>
+
+          <section>
+          <h2>
+            O código acima é:
+          </h2>
+          <ul>
+            <li>
+              <strong>Síncrono: </strong>
+              Cada ação depende diretamente da execução anterior para acontecer
+            </li>
+            <li>
+              <strong>Acoplado: </strong>
+              Há dependência excessiva e caso algum erro aconteça
+              todo processo é interrompido
+            </li>
+            <li>
+              <strong>Pouco responsivo: </strong>
+              Não há noção de progresso, erros ou falhas enquanto acontecem
+            </li>
+          </ul>
+          </section>
+
+          <section>
+            <h2>
+              Uma abordagem assíncrona
+            </h2>
+            <pre><code class="php">
+createPlayerAccount($request) {
+  $player = createPlayerFromRequest($request); // x ms
+  return all([
+    createInventory($player), // 60 ms
+    createSkillset($player) // 120 ms
+  ]);
+}
+createPlayerAccount($data)
+  ->then(function (Model\Player $player) {}) // 120 + x ms
+  ->otherwise(function (InventoryCreationException $e) {})
+  ->otherwise(function (SkillsetCreationException $e) {})
+  ->otherwise(function (\Exception $e) {});
+            </code></pre>
+
+          </section>
+
+          <section>
+            <p>
+              No PHP uma das ferramentas que temos para atingir este
+              resultado é o <a href="http://reactphp.org/" target="_new">React PHP</a>.
+            </p>
+          </section>
+        </section>
+
+        <!-- React PHP: Event-Loop -->
+        <section id="react-php-event-loop">
+          <section>
+            <h2>
+              Event-Loop
+            </h2>
+            <p>
+              É o componente mais básico do React PHP.
+              <br>
+              Trata-se de uma ferramenta que nos permite executar tarefas assíncronas sem precisar recorrer às threads.
+            </p>
+          </section>
+
+          <section>
+            <h2>
+              Implementações
+            </h2>
+            <p>
+              O event-loop do React PHP possui quatro implementações até o momento:
+            </p>
+            <ul>
+              <li>
+                LibEventLoop (<a href="http://php.net/manual/en/book.libevent.php" target="_new">LibEvent</a>)
+              </li>
+              <li>
+                LibEvLoop (<a href="https://github.com/m4rw3r/php-libev" target="_new">Libev</a>)
+              </li>
+              <li>
+                ExtEventLoop (<a href="http://php.net/manual/en/book.event.php" target="_new">Event</a>)
+              </li>
+              <li>
+                StreamSelect (standalone)
+              </li>
+            </ul>
+            <p>
+              Para não nos preocuparmos com isto, podemos utilizar a classe <a href="https://github.com/reactphp/event-loop/blob/master/src/Factory.php" target="_new">React\EventLoop\Factory</a>
+            </p>
+          </section>
+
+          <section>
+            <h2>
+              Funcionamento Básico
+            </h2>
+            <p>
+              É um loop infinito* que, a cada iteração, executa três grupos de processos quando disponíveis:
+            </p>
+            <ul>
+              <li>
+                Timers (One-off/Periodics)
+              </li>
+              <li>
+                Ticks (Next/Future)
+              </li>
+              <li>
+                Callbacks de Streams
+              </li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>
+              Olha o jabá! (pt. 1)
+            </h2>
+            <p>
+              Eu escrevi um post bem detalhado sobre o funcionamento do
+              React\EventLoop neste link:
+              <a href="http://bit.ly/2l9hBIu" target="_new" title="[React PHP] Conceitos básicos – EventLoop">
+                http://bit.ly/2l9hBIu
+              </a>
+            </p>
+          </section>
+        </section>
+
+        <!--React PHP: Streams -->
+        <section id="react-php-streams">
+          <section>
+            <h2>
+              Streams
+            </h2>
+            <p>
+              Uma abstração para trabalhar com <em>resources</em> do tipo <strong>stream</strong> em PHP.
+            </p>
+          </section>
+
+          <section>
+            <p>
+              <em>Resources</em> do tipo <strong>stream</strong> geralmente são os que realizam operações de E/S.
+            </p>
+            <ul>
+              <li>
+                fopen()
+              </li>
+              <li>
+                fsockopen()
+              </li>
+              <li>
+                popen()
+              </li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>
+              Streams não são bloqueantes
+            </h2>
+            <p>
+              Toda instância de React\Stream\Stream utiliza a função <em>stream_set_blocking()</em>
+              em seu construtor. <br>
+              Isto faz com que o <em>resource</em> não bloqueie nossa execução.
+            </p>
+          </section>
+
+          <section>
+            <h2>
+              Olha o jabá! (pt. 2)
+            </h2>
+            <p>
+              Há outro post que escrevi que trata um tanto melhor a utilização de Stream e Sockets
+              com React PHP. Você pode conferir neste link:
+              <a href="http://bit.ly/2lJS32b" target="_new" title="[React PHP] Streams e Sockets">
+                http://bit.ly/2lJS32b
+              </a>
+            </p>
+          </section>
+        </section>
+
+        <section id="visao-do-futuro">
+          <section>
+            <h2>
+              Além disso...
+            </h2>
+            <p>
+              React PHP nos fornece abstrações para trabalhar com Promises,
+              protocolos de mensageria como o Stomp, requisições HTTP e DNS
+              e executar de forma mais controlada processos de linha de comando.
+            </p>
+          </section>
+
+          <section>
+            <h2>
+              E mais!
+            </h2>
+
+            <p>
+              Ferramentas interessantíssimas criadas a partir de React PHP devem ser notadas!
+            </p>
+          </section>
+
+          <section>
+            <a href="http://socketo.me" target="_new">
+              <img width="50%" src="http://socketo.me/assets/img/logo.png" style="background: transparent; border: 0;" title="Cboden/Ratchet">
+            </a>
+          </section>
+
+          <section>
+            <a href="http://kraken-php.com/" target="_new">
+              <img width="50%" src="http://kraken-php.com/build/img/brand/kraken-violet-dark-f4aff9cc48.svg" style="background: transparent; border: 0;" title="Kraken PHP">
+            </a>
+          </section>
+        </section>
+
+        <section id="conclusao">
+          <section>
+            <h2>
+              Alternativas
+            </h2>
+            <p>
+              React PHP atualmente não está sozinho nesta área.<br>
+              Já existem ferramentas mais robustas como o <a href="https://icicle.io/" target="_new">Icicle.io</a>
+              que abusa dos <em>generators</em> ou o <a href="http://amphp.org/" target="_new">amphp</a>, preparado para
+              trabalhar com threads e possuindo drivers assíncronos para utilização de Postgres ou MySQL.
+            </p>
+          </section>
+
+          <section>
+            <h2>
+              PHP também é async!
+            </h2>
+            <p>
+              E há ferramentas incríveis que nos ajudam a fazê-lo trabalhar desta forma.
+              Como o pioneiro <em>React PHP</em>, que traz consigo simplicidade e didática.
+            </p>
+          </section>
+
+          <section>
+            <h2>
+              Obrigado!
+            </h2>
+          </section>
+        </section>
+      </div>
+    </div>
+  </body>
+
+  <script src="assets/reveal.js/js/reveal.js"></script>
+  <script src="assets/headjs/dist/1.0.0/head.js"></script>
+
+  <script type="text/javascript">
+    Reveal.initialize({
+      controls: true,
+      progress: true,
+      history: true,
+      center: true,
+
+      // Optional libraries used to extend on reveal.js
+      dependencies: [
+        { src: 'assets/classlist/classList.js', condition: function() { return !document.body.classList; } },
+        { src: 'assets/marked/lib/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+        { src: 'assets/markdown/lib/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+        { src: 'assets/highlight/src/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } }
+      ]
+    });
+  </script>
+</html>
